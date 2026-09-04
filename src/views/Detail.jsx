@@ -81,6 +81,11 @@ export default function Detail({ id, navigate }) {
       telefono: form.telefono,
       email: form.email,
       mensaje: form.mensaje,
+      etapa: "Nuevo",
+      origen: "Formulario",
+      ciudad: listing.ciudad,
+      tipo_inmueble: listing.tipo_inmueble,
+      operacion: listing.tipo_negocio === "Venta" ? "Comprar" : "Arrendar",
     });
     setSending(false);
     if (error) setSendError(error.message);
@@ -131,16 +136,24 @@ export default function Detail({ id, navigate }) {
           )}
         </div>
 
-        <span style={{ background: color, color: "white", fontSize: 11, fontWeight: 700, padding: "5px 11px", borderRadius: 999 }}>
-          {listing.tipo_negocio} · {listing.tipo_inmueble}
-        </span>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <span style={{ background: color, color: "white", fontSize: 11, fontWeight: 700, padding: "5px 11px", borderRadius: 999 }}>
+            {listing.tipo_negocio} · {listing.tipo_inmueble}
+          </span>
+          {listing.destacado && <span style={{ background: "#faeeda", color: "#854f0b", fontSize: 11, fontWeight: 700, padding: "5px 11px", borderRadius: 999 }}>★ Destacado</span>}
+          {listing.condicion && listing.condicion !== "Usado" && <span className="chip" style={{ padding: "5px 11px" }}>{listing.condicion}</span>}
+        </div>
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, margin: "10px 0 4px" }}>{listing.titulo}</h1>
         <div style={{ color: "var(--color-muted)", fontSize: 14, marginBottom: 14 }}>
           {listing.sector ? `${listing.sector}, ` : ""}{listing.ciudad}
         </div>
         <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 20 }}>
-          {fmtCOP(listing.precio)}
-          {listing.tipo_negocio === "Arriendo" && <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-muted)" }}> /mes</span>}
+          {listing.precio_consultar ? "Precio a consultar" : (
+            <>
+              {fmtCOP(listing.precio)}
+              {listing.tipo_negocio === "Arriendo" && <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-muted)" }}> /mes</span>}
+            </>
+          )}
         </div>
 
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 20, fontSize: 13, color: "var(--color-muted)" }}>
@@ -153,9 +166,29 @@ export default function Detail({ id, navigate }) {
 
         {listing.descripcion && <p style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>{listing.descripcion}</p>}
 
-        {listing.features && Object.keys(listing.features).some((k) => listing.features[k]) && (
+        {(listing.caracteristicas_internas?.length > 0 || listing.caracteristicas_externas?.length > 0) && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+            {[...(listing.caracteristicas_internas || []), ...(listing.caracteristicas_externas || [])].map((f) => <span key={f} className="chip">{f}</span>)}
+          </div>
+        )}
+
+        {(listing.video_url || listing.tour_virtual_url) && (
+          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            {listing.video_url && <a href={listing.video_url} target="_blank" rel="noreferrer" className="btn-secondary">▶ Ver video</a>}
+            {listing.tour_virtual_url && <a href={listing.tour_virtual_url} target="_blank" rel="noreferrer" className="btn-secondary">360° Tour virtual</a>}
+          </div>
+        )}
+
+        {listing.descripcion_zona && (
+          <div style={{ marginBottom: 20 }}>
+            <div className="field-label">La zona</div>
+            <p style={{ fontSize: 14, lineHeight: 1.6 }}>{listing.descripcion_zona}</p>
+          </div>
+        )}
+
+        {listing.publico_objetivo?.length > 0 && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 26 }}>
-            {Object.entries(listing.features).filter(([, v]) => v).map(([f]) => <span key={f} className="chip">{f}</span>)}
+            {listing.publico_objetivo.map((p) => <span key={p} className="chip" style={{ background: "var(--color-surface-soft)" }}>{p}</span>)}
           </div>
         )}
 

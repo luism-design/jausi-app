@@ -33,6 +33,29 @@ export const SPECS_BY_TYPE = {
 
 export const AMENITY_CHIPS = ["Parqueadero", "Amoblado", "Piscina", "Gimnasio", "Terraza", "Zona infantil"];
 
+export const TIPOS_INMUEBLE = PROPERTY_TYPES;
+export const CONDICIONES_INMUEBLE = ["Nuevo", "Usado", "Proyecto"];
+export const CAMPOS_POR_TIPO = {
+  Apartamento: { hab: true, banos: true, banoMedio: true, parq: true, piso: true, estrato: true, anio: true, pisosEdificio: true, areaPrivada: true },
+  Casa: { hab: true, banos: true, banoMedio: true, parq: true, estrato: true, anio: true, areaTerreno: true },
+  Bodega: { banos: true, parq: true, anio: true, areaTerreno: true },
+  Local: { banos: true, parq: true, estrato: true, anio: true },
+  Lote: { areaTerreno: true },
+};
+export const CARACTERISTICAS_INTERNAS = ["Cocina integral", "Closets", "Piso en porcelanato", "Balcón", "Chimenea", "Vestier", "Estudio", "Zona de ropas", "Aire acondicionado", "Calefacción"];
+export const CARACTERISTICAS_EXTERNAS = ["Parqueadero visitantes", "Piscina", "Gimnasio", "Zona BBQ", "Salón social", "Portería 24 horas", "Cancha deportiva", "Zona infantil", "Ascensor", "Jardín"];
+
+export const ETAPAS_EMBUDO = ["Nuevo", "Contactado", "En proceso", "Ganado", "Perdido"];
+export const ETAPA_COLOR = {
+  Nuevo: { bg: "#ffe3e9", fg: "#ff385c" },
+  Contactado: { bg: "#f0f0f0", fg: "#6a6a6a" },
+  "En proceso": { bg: "#e4ecf6", fg: "#3e5a80" },
+  Ganado: { bg: "#dcf5f3", fg: "#00a699" },
+  Perdido: { bg: "#fbe2e2", fg: "#b3401f" },
+};
+export const TIPOS_TAREA = ["Llamada", "Correo", "Evento", "Visita"];
+export const TIPOS_OPERACION_LEAD = ["Comprar", "Vender", "Arrendar"];
+
 export const PRESUPUESTO_OPTIONS = ["Todos", "Hasta $300M", "$300M - $600M", "$600M - $1.000M", "Más de $1.000M"];
 
 export function matchesPresupuesto(precio, opcion) {
