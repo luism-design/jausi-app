@@ -86,9 +86,9 @@ export default function Publish({ navigate, id }) {
   const editing = !!id;
   const [form, setForm] = useState(emptyForm);
   const [loadingListing, setLoadingListing] = useState(editing);
-  const [existingImage, setExistingImage] = useState(null);
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [existingImages, setExistingImages] = useState([]);
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [nuevoPublico, setNuevoPublico] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
@@ -154,7 +154,7 @@ export default function Publish({ navigate, id }) {
         observaciones: priv?.observaciones || "",
         estado: l.estado,
       });
-      setExistingImage(l.imagenes?.[0] || null);
+      setExistingImages(l.imagenes || []);
       setLoadingListing(false);
     })();
     return () => { active = false; };
@@ -180,10 +180,20 @@ export default function Publish({ navigate, id }) {
     setNuevoPublico("");
   }
   function onImageChange(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const total = existingImages.length + imageFiles.length + files.length;
+    const allowed = files.slice(0, Math.max(0, 20 - existingImages.length - imageFiles.length));
+    if (total > 20) setError("Máximo 20 fotos por inmueble. Se agregaron las primeras hasta completar el límite.");
+    setImageFiles((prev) => [...prev, ...allowed]);
+    setImagePreviews((prev) => [...prev, ...allowed.map((f) => URL.createObjectURL(f))]);
+  }
+  function removeExistingImage(i) {
+    setExistingImages((prev) => prev.filter((_, idx) => idx !== i));
+  }
+  function removeNewImage(i) {
+    setImageFiles((prev) => prev.filter((_, idx) => idx !== i));
+    setImagePreviews((prev) => prev.filter((_, idx) => idx !== i));
   }
 
   async function submit(e) {
@@ -191,18 +201,21 @@ export default function Publish({ navigate, id }) {
     setSending(true);
     setError(null);
 
-    let imagenes = existingImage ? [existingImage] : [];
-    if (imageFile) {
-      const path = `${user.id}/${Date.now()}-${imageFile.name}`;
-      const { error: upErr } = await supabase.storage.from("listing-images").upload(path, imageFile);
-      if (upErr) {
-        setError("No se pudo subir la imagen: " + upErr.message);
-        setSending(false);
-        return;
+    let imagenes = [...existingImages];
+    if (imageFiles.length) {
+      for (const file of imageFiles) {
+        const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+        const { error: upErr } = await supabase.storage.from("listing-images").upload(path, file);
+        if (upErr) {
+          setError("No se pudo subir una imagen: " + upErr.message);
+          setSending(false);
+          return;
+        }
+        const { data: pub } = supabase.storage.from("listing-images").getPublicUrl(path);
+        imagenes.push(pub.publicUrl);
       }
-      const { data: pub } = supabase.storage.from("listing-images").getPublicUrl(path);
-      imagenes = [pub.publicUrl];
     }
+    imagenes = imagenes.slice(0, 20);
 
     const payload = {
       destacado: form.destacado,
@@ -277,8 +290,8 @@ export default function Publish({ navigate, id }) {
       setSent(true);
       if (!editing) {
         setForm(emptyForm);
-        setImageFile(null);
-        setImagePreview(null);
+        setImageFiles([]);
+        setImagePreviews([]);
       }
     }
   }
@@ -432,9 +445,26 @@ export default function Publish({ navigate, id }) {
           {CARACTERISTICAS_EXTERNAS.map((c) => <button type="button" key={c} className={`chip ${form.caracteristicasExternas.includes(c) ? "chip-active" : ""}`} onClick={() => toggleArr("caracteristicasExternas", c)}>{c}</button>)}
         </div>
 
-        <SectionTitle>Foto principal</SectionTitle>
-        <input type="file" accept="image/*" onChange={onImageChange} />
-        {(imagePreview || existingImage) && <img src={imagePreview || existingImage} alt="preview" style={{ marginTop: 10, height: 140, borderRadius: 12, objectFit: "cover", display: "block" }} />}
+        <SectionTitle>Fotos (hasta 20)</SectionTitle>
+        <input type="file" accept="image/*" multiple onChange={onImageChange} />
+        {(existingImages.length > 0 || imagePreviews.length > 0) && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+            {existingImages.map((url, i) => (
+              <div key={`e${i}`} style={{ position: "relative", width: 84, height: 84 }}>
+                <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} />
+                {i === 0 && <span style={{ position: "absolute", bottom: 2, left: 2, right: 2, textAlign: "center", fontSize: 9, fontWeight: 700, background: "rgba(0,0,0,0.6)", color: "white", borderRadius: 6, padding: "1px 0" }}>Portada</span>}
+                <button type="button" onClick={() => removeExistingImage(i)} style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", background: "var(--color-venta)", color: "white", border: "2px solid white", fontSize: 11, cursor: "pointer" }}>✕</button>
+              </div>
+            ))}
+            {imagePreviews.map((url, i) => (
+              <div key={`n${i}`} style={{ position: "relative", width: 84, height: 84 }}>
+                <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} />
+                <button type="button" onClick={() => removeNewImage(i)} style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", background: "var(--color-venta)", color: "white", border: "2px solid white", fontSize: 11, cursor: "pointer" }}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <p style={{ fontSize: 11.5, color: "var(--color-muted)", margin: "8px 0 0" }}>{existingImages.length + imagePreviews.length}/20 fotos. La primera foto queda como portada.</p>
 
         <SectionTitle>Datos del propietario (privado, no se publica)</SectionTitle>
         <input className="field-input" style={{ marginBottom: 10 }} value={form.ownerNombre} onChange={(e) => set("ownerNombre", e.target.value)} placeholder="Nombre del propietario" />

@@ -56,6 +56,35 @@ export const ETAPA_COLOR = {
 export const TIPOS_TAREA = ["Llamada", "Correo", "Evento", "Visita"];
 export const TIPOS_OPERACION_LEAD = ["Comprar", "Vender", "Arrendar"];
 
+// Íconos por tipo de inmueble para la tarjeta y la ficha (nombres de lucide-react)
+export const ICONOS_POR_TIPO = {
+  Apartamento: [
+    { key: "area", icon: "Ruler", suffix: " m²", label: "Área construida" },
+    { key: "habitaciones", icon: "BedDouble", suffix: " alcobas", label: "Habitaciones" },
+    { key: "parqueaderos", icon: "Car", suffix: " garaje", label: "Parqueaderos" },
+    { key: "banos", icon: "Bath", suffix: " baños", label: "Baños" },
+  ],
+  Casa: [
+    { key: "area", icon: "Ruler", suffix: " m²", label: "Área construida" },
+    { key: "habitaciones", icon: "BedDouble", suffix: " alcobas", label: "Habitaciones" },
+    { key: "parqueaderos", icon: "Car", suffix: " garaje", label: "Parqueaderos" },
+    { key: "banos", icon: "Bath", suffix: " baños", label: "Baños" },
+  ],
+  Bodega: [
+    { key: "area", icon: "Ruler", suffix: " m²", label: "Área" },
+    { key: "pisos_edificio", icon: "Warehouse", suffix: " niveles", label: "Niveles" },
+    { key: "parqueaderos", icon: "Car", suffix: " parq.", label: "Parqueaderos" },
+  ],
+  Local: [
+    { key: "area", icon: "Ruler", suffix: " m²", label: "Área" },
+    { key: "piso", icon: "Store", suffix: "", label: "Piso" },
+    { key: "banos", icon: "Bath", suffix: " baños", label: "Baños" },
+  ],
+  Lote: [
+    { key: "area_terreno", icon: "LandPlot", suffix: " m²", label: "Área de terreno" },
+  ],
+};
+
 export const PRESUPUESTO_OPTIONS = ["Todos", "Hasta $300M", "$300M - $600M", "$600M - $1.000M", "Más de $1.000M"];
 
 export function matchesPresupuesto(precio, opcion) {

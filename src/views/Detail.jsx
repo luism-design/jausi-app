@@ -1,9 +1,160 @@
 import { useEffect, useState } from "react";
+import { Ruler, BedDouble, Car, Bath, Warehouse, Store, LandPlot, Play } from "lucide-react";
 import { supabase } from "../lib/supabaseClient.js";
 import { useAuth } from "../lib/AuthContext.jsx";
-import { fmtCOP, tipoColor } from "../lib/utils.js";
+import { fmtCOP, tipoColor, ICONOS_POR_TIPO } from "../lib/utils.js";
 import MapView from "../components/MapView.jsx";
 import PropertyCard from "../components/PropertyCard.jsx";
+
+const ICON_MAP = { Ruler, BedDouble, Car, Bath, Warehouse, Store, LandPlot };
+
+function getYouTubeId(url) {
+  if (!url) return null;
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]{11})/);
+  return m ? m[1] : null;
+}
+
+function Gallery({ imagenes, titulo }) {
+  const [verTodas, setVerTodas] = useState(false);
+  const fotos = imagenes?.length ? imagenes : [];
+
+  if (fotos.length === 0) {
+    return (
+      <div style={{ height: 300, borderRadius: 18, background: "var(--color-surface-soft)", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-muted)" }}>
+        Sin fotos todavía
+      </div>
+    );
+  }
+
+  if (verTodas) {
+    return (
+      <div style={{ marginBottom: 20 }}>
+        <button className="btn-secondary" onClick={() => setVerTodas(false)} style={{ marginBottom: 12 }}>← Ver menos</button>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 8 }}>
+          {fotos.map((url, i) => (
+            <img key={i} src={url} alt={`${titulo} foto ${i + 1}`} style={{ width: "100%", height: 160, objectFit: "cover", borderRadius: 12 }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const principal = fotos[0];
+  const miniaturas = fotos.slice(1, 5);
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: miniaturas.length ? "1.4fr 1fr" : "1fr", gridTemplateRows: "1fr 1fr", gap: 6, height: 320, borderRadius: 18, overflow: "hidden" }}>
+        <img src={principal} alt={titulo} style={{ gridRow: miniaturas.length ? "1 / 3" : "auto", width: "100%", height: "100%", objectFit: "cover" }} />
+        {miniaturas.map((url, i) => (
+          <div key={i} style={{ position: "relative" }}>
+            <img src={url} alt={`${titulo} foto ${i + 2}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            {i === 3 && fotos.length > 5 && (
+              <div
+                onClick={() => setVerTodas(true)}
+                style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+              >
+                +{fotos.length - 5} fotos
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {fotos.length > 1 && (
+        <button className="btn-secondary" onClick={() => setVerTodas(true)} style={{ marginTop: 10 }}>
+          Ver las {fotos.length} fotos
+        </button>
+      )}
+    </div>
+  );
+}
+
+function VideoBlock({ videoUrl, tourUrl }) {
+  const [playing, setPlaying] = useState(false);
+  const ytId = getYouTubeId(videoUrl);
+
+  if (!videoUrl && !tourUrl) return null;
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      {videoUrl && (
+        <>
+          <div className="field-label">Video del inmueble</div>
+          {!ytId ? (
+            <a href={videoUrl} target="_blank" rel="noreferrer" className="btn-secondary" style={{ display: "inline-block" }}>▶ Ver video</a>
+          ) : !playing ? (
+            <div
+              onClick={() => setPlaying(true)}
+              style={{ position: "relative", height: 240, borderRadius: 16, overflow: "hidden", cursor: "pointer", background: "#111" }}
+            >
+              <img src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }} />
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 60, height: 60, borderRadius: "50%", background: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Play size={24} color="var(--color-venta)" fill="var(--color-venta)" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ position: "relative", paddingTop: "56.25%", borderRadius: 16, overflow: "hidden" }}>
+              <iframe
+                src={`https://www.youtube.com/embed/${ytId}?autoplay=1`}
+                title="Video del inmueble"
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
+              />
+            </div>
+          )}
+        </>
+      )}
+      {tourUrl && (
+        <a href={tourUrl} target="_blank" rel="noreferrer" className="btn-secondary" style={{ display: "inline-block", marginTop: videoUrl ? 10 : 0 }}>
+          360° Tour virtual
+        </a>
+      )}
+    </div>
+  );
+}
+
+function SpecGrid({ listing }) {
+  const specs = (ICONOS_POR_TIPO[listing.tipo_inmueble] || ICONOS_POR_TIPO.Apartamento).filter(
+    (s) => listing[s.key] !== undefined && listing[s.key] !== null && listing[s.key] !== ""
+  );
+  const extra = [];
+  if (listing.estrato) extra.push({ key: "estrato", icon: "Store", label: "Estrato", value: listing.estrato });
+  if (listing.anio_construccion) extra.push({ key: "anio_construccion", icon: "Warehouse", label: "Año construcción", value: listing.anio_construccion });
+  if (listing.administracion) extra.push({ key: "administracion", icon: "Ruler", label: "Administración", value: fmtCOP(listing.administracion) });
+
+  if (specs.length === 0 && extra.length === 0) return null;
+
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <div className="field-label">Detalles del inmueble</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))", gap: 10 }}>
+        {specs.map((s) => {
+          const Icon = ICON_MAP[s.icon];
+          return (
+            <div key={s.key} className="card" style={{ padding: "14px 8px", textAlign: "center" }}>
+              <Icon size={20} color="var(--color-venta)" style={{ marginBottom: 6 }} />
+              <div style={{ fontWeight: 800, fontSize: 14 }}>{listing[s.key]}{s.key === "banos" && listing.bano_medio ? "½" : ""}</div>
+              <div style={{ fontSize: 10, color: "var(--color-muted)" }}>{s.label}</div>
+            </div>
+          );
+        })}
+        {extra.map((s) => {
+          const Icon = ICON_MAP[s.icon];
+          return (
+            <div key={s.key} className="card" style={{ padding: "14px 8px", textAlign: "center" }}>
+              <Icon size={20} color="var(--color-venta)" style={{ marginBottom: 6 }} />
+              <div style={{ fontWeight: 800, fontSize: 14 }}>{s.value}</div>
+              <div style={{ fontSize: 10, color: "var(--color-muted)" }}>{s.label}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function Detail({ id, navigate }) {
   const { user, isLoggedIn } = useAuth();
@@ -14,7 +165,7 @@ export default function Detail({ id, navigate }) {
   const [shareOpen, setShareOpen] = useState(false);
   const [comparables, setComparables] = useState([]);
 
-  const [form, setForm] = useState({ nombre: "", telefono: "", email: "", mensaje: "" });
+  const [form, setForm] = useState({ nombre: "", telefono: "", email: "" });
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(null);
@@ -33,12 +184,7 @@ export default function Detail({ id, navigate }) {
         if (active) setOwner(p || null);
       }
       if (l && user) {
-        const { data: fav } = await supabase
-          .from("favorites")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("listing_id", l.id)
-          .maybeSingle();
+        const { data: fav } = await supabase.from("favorites").select("*").eq("user_id", user.id).eq("listing_id", l.id).maybeSingle();
         if (active) setIsFavorite(!!fav);
       }
       if (l) {
@@ -54,9 +200,7 @@ export default function Detail({ id, navigate }) {
       }
       setLoading(false);
     })();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [id, user]);
 
   async function toggleFavorite() {
@@ -80,7 +224,6 @@ export default function Detail({ id, navigate }) {
       nombre: form.nombre,
       telefono: form.telefono,
       email: form.email,
-      mensaje: form.mensaje,
       etapa: "Nuevo",
       origen: "Formulario",
       ciudad: listing.ciudad,
@@ -109,6 +252,24 @@ export default function Detail({ id, navigate }) {
     ? Math.round(comparables.reduce((s, c) => s + Number(c.precio || 0), 0) / comparables.length)
     : null;
 
+  const ContactForm = () => (
+    <div className="card" style={{ padding: 20, marginBottom: 20 }}>
+      <div style={{ fontWeight: 700, marginBottom: 2 }}>Agenda tu visita</div>
+      <div style={{ fontSize: 12.5, color: "var(--color-muted)", marginBottom: 14 }}>Solo necesitamos tus datos básicos, te contactamos enseguida.</div>
+      {sent ? (
+        <div className="toast-banner">¡Listo! Tu mensaje fue enviado. Te contactarán pronto.</div>
+      ) : (
+        <form onSubmit={submitLead} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <input required className="field-input" placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
+          <input required className="field-input" placeholder="Teléfono (WhatsApp)" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
+          <input required type="email" className="field-input" placeholder="Correo" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          {sendError && <div style={{ color: "#b3401f", fontSize: 13 }}>{sendError}</div>}
+          <button className="btn-primary" disabled={sending} type="submit">{sending ? "Enviando…" : "Quiero agendar una visita"}</button>
+        </form>
+      )}
+    </div>
+  );
+
   return (
     <div className="container" style={{ padding: "24px 24px 60px", display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 28 }}>
       <div>
@@ -126,15 +287,7 @@ export default function Detail({ id, navigate }) {
           </div>
         )}
 
-        <div style={{ height: 340, borderRadius: 18, background: "var(--color-surface-soft)", marginBottom: 20, overflow: "hidden" }}>
-          {listing.imagenes?.[0] ? (
-            <img src={listing.imagenes[0]} alt={listing.titulo} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          ) : (
-            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-muted)" }}>
-              Sin fotos todavía
-            </div>
-          )}
-        </div>
+        <Gallery imagenes={listing.imagenes} titulo={listing.titulo} />
 
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <span style={{ background: color, color: "white", fontSize: 11, fontWeight: 700, padding: "5px 11px", borderRadius: 999 }}>
@@ -143,11 +296,11 @@ export default function Detail({ id, navigate }) {
           {listing.destacado && <span style={{ background: "#faeeda", color: "#854f0b", fontSize: 11, fontWeight: 700, padding: "5px 11px", borderRadius: 999 }}>★ Destacado</span>}
           {listing.condicion && listing.condicion !== "Usado" && <span className="chip" style={{ padding: "5px 11px" }}>{listing.condicion}</span>}
         </div>
-        <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, margin: "10px 0 4px" }}>{listing.titulo}</h1>
+        <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, margin: "10px 0 4px", lineHeight: 1.25 }}>{listing.titulo}</h1>
         <div style={{ color: "var(--color-muted)", fontSize: 14, marginBottom: 14 }}>
           {listing.sector ? `${listing.sector}, ` : ""}{listing.ciudad}
         </div>
-        <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 20 }}>
+        <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 8 }}>
           {listing.precio_consultar ? "Precio a consultar" : (
             <>
               {fmtCOP(listing.precio)}
@@ -156,15 +309,19 @@ export default function Detail({ id, navigate }) {
           )}
         </div>
 
-        <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 20, fontSize: 13, color: "var(--color-muted)" }}>
-          {listing.area && <span><strong style={{ color: "var(--color-ink)" }}>{listing.area}</strong> m²</span>}
-          {listing.estrato && <span>Estrato <strong style={{ color: "var(--color-ink)" }}>{listing.estrato}</strong></span>}
-          {listing.piso && <span>Piso <strong style={{ color: "var(--color-ink)" }}>{listing.piso}</strong></span>}
-          {listing.anio_construccion && <span>Año <strong style={{ color: "var(--color-ink)" }}>{listing.anio_construccion}</strong></span>}
-          {listing.administracion ? <span>Admin. <strong style={{ color: "var(--color-ink)" }}>{fmtCOP(listing.administracion)}</strong></span> : null}
+        <div style={{ display: "flex", gap: 14, marginBottom: 20, padding: "12px 0", borderTop: "1px solid var(--color-border)", borderBottom: "1px solid var(--color-border)" }}>
+          {["✓ Verificado", "⚡ Respuesta rápida", "★ Asesor certificado"].map((t) => (
+            <span key={t} style={{ fontSize: 12, color: "var(--color-muted)", fontWeight: 600 }}>{t}</span>
+          ))}
         </div>
 
-        {listing.descripcion && <p style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>{listing.descripcion}</p>}
+        <VideoBlock videoUrl={listing.video_url} tourUrl={listing.tour_virtual_url} />
+
+        {listing.descripcion && (
+          <p style={{ fontSize: 14, lineHeight: 1.7, marginBottom: 20, whiteSpace: "pre-wrap" }}>{listing.descripcion}</p>
+        )}
+
+        <SpecGrid listing={listing} />
 
         {(listing.caracteristicas_internas?.length > 0 || listing.caracteristicas_externas?.length > 0) && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
@@ -172,17 +329,10 @@ export default function Detail({ id, navigate }) {
           </div>
         )}
 
-        {(listing.video_url || listing.tour_virtual_url) && (
-          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-            {listing.video_url && <a href={listing.video_url} target="_blank" rel="noreferrer" className="btn-secondary">▶ Ver video</a>}
-            {listing.tour_virtual_url && <a href={listing.tour_virtual_url} target="_blank" rel="noreferrer" className="btn-secondary">360° Tour virtual</a>}
-          </div>
-        )}
-
         {listing.descripcion_zona && (
           <div style={{ marginBottom: 20 }}>
             <div className="field-label">La zona</div>
-            <p style={{ fontSize: 14, lineHeight: 1.6 }}>{listing.descripcion_zona}</p>
+            <p style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{listing.descripcion_zona}</p>
           </div>
         )}
 
@@ -192,16 +342,15 @@ export default function Detail({ id, navigate }) {
           </div>
         )}
 
-        {listing.lat != null && listing.lng != null ? (
-          <div style={{ marginBottom: 30 }}>
-            <div className="field-label">Ubicación</div>
-            <MapView mode="display" value={{ lat: listing.lat, lng: listing.lng }} height={220} />
-          </div>
-        ) : (
-          <div className="card" style={{ padding: 16, marginBottom: 30, color: "var(--color-muted)", fontSize: 13 }}>
-            Este inmueble todavía no tiene una ubicación marcada en el mapa.
-          </div>
-        )}
+        <div className="hide-desktop">
+          <ContactForm />
+          {listing.lat != null && listing.lng != null && (
+            <div style={{ marginBottom: 30 }}>
+              <div className="field-label">Ubicación</div>
+              <MapView mode="display" value={{ lat: listing.lat, lng: listing.lng }} height={200} />
+            </div>
+          )}
+        </div>
 
         {comparables.length > 0 && (
           <div>
@@ -222,7 +371,7 @@ export default function Detail({ id, navigate }) {
         )}
       </div>
 
-      <div>
+      <div className="hide-mobile">
         {owner && (
           <div className="card" style={{ padding: 16, marginBottom: 16, cursor: "pointer" }} onClick={() => navigate("advisor", owner.id)}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -237,21 +386,18 @@ export default function Detail({ id, navigate }) {
           </div>
         )}
 
-        <div className="card" style={{ padding: 20 }}>
-          <div style={{ fontWeight: 700, marginBottom: 12 }}>Contactar por este inmueble</div>
-          {sent ? (
-            <div className="toast-banner">¡Listo! Tu mensaje fue enviado. Te contactarán pronto.</div>
-          ) : (
-            <form onSubmit={submitLead} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <input required className="field-input" placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
-              <input required className="field-input" placeholder="Teléfono" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
-              <input required type="email" className="field-input" placeholder="Correo" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-              <textarea className="field-input" rows={3} placeholder="Mensaje (opcional)" value={form.mensaje} onChange={(e) => setForm({ ...form, mensaje: e.target.value })} />
-              {sendError && <div style={{ color: "#b3401f", fontSize: 13 }}>{sendError}</div>}
-              <button className="btn-primary" disabled={sending} type="submit">{sending ? "Enviando…" : "Enviar mensaje"}</button>
-            </form>
-          )}
-        </div>
+        <ContactForm />
+
+        {listing.lat != null && listing.lng != null ? (
+          <div style={{ marginBottom: 30 }}>
+            <div className="field-label">Ubicación</div>
+            <MapView mode="display" value={{ lat: listing.lat, lng: listing.lng }} height={200} />
+          </div>
+        ) : (
+          <div className="card" style={{ padding: 16, marginBottom: 30, color: "var(--color-muted)", fontSize: 13 }}>
+            Este inmueble todavía no tiene una ubicación marcada en el mapa.
+          </div>
+        )}
       </div>
     </div>
   );

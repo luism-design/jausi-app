@@ -3,7 +3,22 @@ import { supabase } from "../lib/supabaseClient.js";
 import { useAuth } from "../lib/AuthContext.jsx";
 import PropertyCard from "../components/PropertyCard.jsx";
 import MapView from "../components/MapView.jsx";
+import Footer from "../components/Footer.jsx";
 import { PROPERTY_TYPES, PRESUPUESTO_OPTIONS, matchesPresupuesto, tipoColor } from "../lib/utils.js";
+
+function getPreferredCity(listings) {
+  try {
+    const stored = localStorage.getItem("jausi:lastCity");
+    if (stored) return stored;
+  } catch {}
+  if (!listings.length) return null;
+  const counts = {};
+  listings.forEach((l) => { if (l.ciudad) counts[l.ciudad] = (counts[l.ciudad] || 0) + 1; });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+}
+function rememberCity(city) {
+  try { if (city) localStorage.setItem("jausi:lastCity", city); } catch {}
+}
 
 export default function Home({ navigate }) {
   const { user, isLoggedIn } = useAuth();
@@ -89,6 +104,20 @@ export default function Home({ navigate }) {
     [filtered]
   );
 
+  const destacados = useMemo(() => listings.filter((l) => l.destacado), [listings]);
+  const preferredCity = useMemo(() => getPreferredCity(listings), [listings]);
+  const recomendados = useMemo(
+    () => (preferredCity ? listings.filter((l) => l.ciudad === preferredCity) : []),
+    [listings, preferredCity]
+  );
+
+  useEffect(() => {
+    if (searchText.trim()) {
+      const match = listings.find((l) => l.ciudad && searchText.toLowerCase().includes(l.ciudad.toLowerCase()));
+      if (match) rememberCity(match.ciudad);
+    }
+  }, [searchText, listings]);
+
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
       <div style={{ borderBottom: "1px solid var(--color-border)" }}>
@@ -130,7 +159,28 @@ export default function Home({ navigate }) {
         </div>
       </div>
 
-      <div className="container" style={{ padding: "24px 24px 60px" }}>
+      <div className="container" style={{ padding: "24px 24px 0" }}>
+        <div
+          style={{
+            height: 100, borderRadius: 16, marginBottom: 32, display: "flex", alignItems: "center", padding: "0 28px",
+            color: "white", background: "linear-gradient(120deg, var(--color-venta), var(--color-arriendo))",
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>¿Eres asesor o constructora?</div>
+            <div style={{ fontSize: 12.5, opacity: 0.9 }}>Crea tu perfil-landing gratis y publica sin límites.</div>
+          </div>
+        </div>
+
+        {!loading && destacados.length > 0 && (
+          <HorizontalRow title="Destacados" subtitle="Inmuebles resaltados por sus asesores" items={destacados} onOpen={(id) => navigate("detail", id)} />
+        )}
+        {!loading && recomendados.length > 0 && (
+          <HorizontalRow title={`Recomendados para ti en ${preferredCity}`} subtitle="Según tu ubicación y búsquedas recientes" items={recomendados} onOpen={(id) => navigate("detail", id)} />
+        )}
+      </div>
+
+      <div className="container" style={{ padding: "0 24px 60px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div style={{ fontSize: 13, color: "var(--color-muted)" }}>
             {loading ? "Cargando inmuebles…" : `${filtered.length} inmueble${filtered.length === 1 ? "" : "s"} encontrado${filtered.length === 1 ? "" : "s"}`}
@@ -177,6 +227,25 @@ export default function Home({ navigate }) {
             ))}
           </div>
         )}
+      </div>
+      <Footer />
+    </div>
+  );
+}
+
+function HorizontalRow({ title, subtitle, items, onOpen }) {
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 17, fontWeight: 700 }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 12.5, color: "var(--color-muted)" }}>{subtitle}</div>}
+      </div>
+      <div style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 6 }}>
+        {items.map((l) => (
+          <div key={l.id} style={{ width: 220, flexShrink: 0 }}>
+            <PropertyCard listing={l} onOpen={onOpen} />
+          </div>
+        ))}
       </div>
     </div>
   );
